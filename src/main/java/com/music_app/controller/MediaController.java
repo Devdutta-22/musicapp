@@ -52,29 +52,29 @@ public class MediaController {
      * Redirect /api/cover/** to FILES_BASE_URL/{path}
      * Accepts any path after /api/cover/ (covers/..., artists/..., etc.)
      */
-    @GetMapping("/cover/**")
-    public ResponseEntity<Void> coverRedirect(HttpServletRequest request) {
-        // Get the path within the mapping, e.g. "/cover/covers/xxx.jpg"
-        String pathWithinHandler = (String) request.getAttribute(HandlerMapping.PATH_WITHIN_HANDLER_MAPPING_ATTRIBUTE);
-        if (pathWithinHandler == null) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+    // @GetMapping("/cover/**")
+    // public ResponseEntity<Void> coverRedirect(HttpServletRequest request) {
+    //     // Get the path within the mapping, e.g. "/cover/covers/xxx.jpg"
+    //     String pathWithinHandler = (String) request.getAttribute(HandlerMapping.PATH_WITHIN_HANDLER_MAPPING_ATTRIBUTE);
+    //     if (pathWithinHandler == null) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
 
-        // Remove the prefix "/cover/" to get "covers/xxx.jpg"
-        String prefix = "/cover/";
-        String targetPath;
-        if (pathWithinHandler.startsWith(prefix)) {
-            targetPath = pathWithinHandler.substring(prefix.length());
-        } else {
-            targetPath = pathWithinHandler; // fallback
-        }
+    //     // Remove the prefix "/cover/" to get "covers/xxx.jpg"
+    //     String prefix = "/cover/";
+    //     String targetPath;
+    //     if (pathWithinHandler.startsWith(prefix)) {
+    //         targetPath = pathWithinHandler.substring(prefix.length());
+    //     } else {
+    //         targetPath = pathWithinHandler; // fallback
+    //     }
 
-        if (targetPath == null || targetPath.isBlank()) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        }
+    //     if (targetPath == null || targetPath.isBlank()) {
+    //         throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+    //     }
 
-        String base = normalizeBase(filesBaseUrl);
-        String redirectUrl = base + "/" + targetPath;
-        return ResponseEntity.status(HttpStatus.FOUND).location(URI.create(redirectUrl)).build();
-    }
+    //     String base = normalizeBase(filesBaseUrl);
+    //     String redirectUrl = base + "/" + targetPath;
+    //     return ResponseEntity.status(HttpStatus.FOUND).location(URI.create(redirectUrl)).build();
+    // }
 
     // helper to trim trailing slash from base if present
     private String normalizeBase(String base) {
