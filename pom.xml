@@ -60,9 +60,9 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.jaudiotagger</groupId>
-            <artifactId>jaudiotagger</artifactId>
-            <version>2.2.6</version>
+                 <groupId>net.jthink</groupId>
+                 <artifactId>jaudiotagger</artifactId>
+                 <version>3.0.1</version>
         </dependency>
 
     </dependencies>
