@@ -30,8 +30,8 @@ public class SongController {
     @Value("${app.media.base-path}")
     private String mediaBasePath;
 
-    // 🔥 NEW: Cloudflare files base URL (empty = fallback local mode)
-    @Value("${FILES_BASE_URL:}")
+    // 🔥 Use storage.base-url from application.properties (R2 public base)
+    @Value("${storage.base-url:}")
     private String filesBaseUrl;
 
     public SongController(SongRepository songRepository, LikeRepository likeRepository, ArtistRepository artistRepository) {
