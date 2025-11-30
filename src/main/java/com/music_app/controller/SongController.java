@@ -28,12 +28,13 @@ public class SongController {
     private final SongRepository songRepository;
     private final LikeRepository likeRepository;
     private final ArtistRepository artistRepository;
-    private final AmazonS3 s3Client; // <--- Added Cloudflare Client
+    private final AmazonS3 s3Client; 
 
     @Value("${r2.bucket-name}")
     private String bucketName;
 
-    @Value("${storage.base-url}")
+    // CHANGED: Matches the variable in your screenshot
+    @Value("${FILES_BASE_URL}") 
     private String filesBaseUrl;
 
     public SongController(SongRepository songRepository, LikeRepository likeRepository, ArtistRepository artistRepository, AmazonS3 s3Client) {
@@ -51,7 +52,7 @@ public class SongController {
         s3Client.putObject(new PutObjectRequest(bucketName, key, file.getInputStream(), metadata));
     }
 
-    // --- UPDATED UPLOAD ENDPOINT ---
+    // --- UPLOAD ENDPOINT ---
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public SongDto upload(@RequestParam("file") MultipartFile file,
                           @RequestParam("title") String title,
@@ -77,7 +78,7 @@ public class SongController {
                 uploadToR2(coverImage, coverKey);
             }
 
-            // 3. Handle Artist Logic (Same as before)
+            // 3. Handle Artist Logic
             Artist artist = null;
             if (artistId != null && artistRepository.existsById(artistId)) {
                 artist = artistRepository.findById(artistId).get();
@@ -93,31 +94,30 @@ public class SongController {
             // 4. Save to Database
             Song s = new Song();
             s.setTitle(title != null ? title : file.getOriginalFilename());
-            s.setFilePath(songKey); // Save the R2 path (e.g., "songs/xyz.mp3")
+            s.setFilePath(songKey); 
             s.setMimeType(file.getContentType());
             s.setAlbum(album);
             s.setCoverPath(coverKey);
             s.setArtist(artist);
             songRepository.save(s);
 
-            // Return the DTO so frontend updates immediately
+            // Return DTO
             return SongDto.fromEntity(s, filesBaseUrl, false, 0);
 
         } catch (IOException e) {
-            e.printStackTrace(); // Check Render logs for this!
+            e.printStackTrace(); 
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Upload failed: " + e.getMessage());
         }
     }
-
-    // (Keep your existing getOne, list, search, like, unlike methods here...)
-    // ...
 
     private String getExtension(String filename) {
         return (filename != null && filename.contains(".")) ? filename.substring(filename.lastIndexOf('.')) : "";
     }
     
-    // ... (Keep existing methods)
-        private Long parseUserId(Long headerUserId) {
+    // ... (Keep the rest of your Get/List/Search methods here) ...
+    // Make sure you include the search, list, getOne, and like/unlike methods!
+    
+    private Long parseUserId(Long headerUserId) {
         return headerUserId == null ? null : headerUserId;
     }
 
