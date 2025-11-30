@@ -203,4 +203,8 @@ public class SongController {
         int count = likeRepository.countBySongId(id);
         return Map.of("liked", false, "likeCount", count);
     }
+    @GetMapping("/ping")
+    public String ping() {
+        return "Pong!";
+    }
 }
