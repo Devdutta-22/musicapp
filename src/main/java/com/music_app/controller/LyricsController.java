@@ -16,7 +16,7 @@ import java.util.Optional;
  */
 @RestController
 @RequestMapping("/api/lyrics")
-@CrossOrigin(origins = "*")
+// @CrossOrigin(origins = "*")
 @Validated
 public class LyricsController {
 
