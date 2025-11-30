@@ -1,5 +1,8 @@
 package com.music_app.controller;
 
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.model.ObjectMetadata;
+import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.music_app.dto.SongDto;
 import com.music_app.model.Artist;
 import com.music_app.model.LikeEntity;
@@ -8,14 +11,13 @@ import com.music_app.repository.ArtistRepository;
 import com.music_app.repository.LikeRepository;
 import com.music_app.repository.SongRepository;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
-import org.springframework.http.HttpStatus;
 
 import java.io.IOException;
-import java.nio.file.*;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -26,21 +28,96 @@ public class SongController {
     private final SongRepository songRepository;
     private final LikeRepository likeRepository;
     private final ArtistRepository artistRepository;
+    private final AmazonS3 s3Client; // <--- Added Cloudflare Client
 
-    @Value("${app.media.base-path}")
-    private String mediaBasePath;
+    @Value("${r2.bucket-name}")
+    private String bucketName;
 
-    // 🔥 Use storage.base-url from application.properties (R2 public base)
-    @Value("${storage.base-url:}")
+    @Value("${storage.base-url}")
     private String filesBaseUrl;
 
-    public SongController(SongRepository songRepository, LikeRepository likeRepository, ArtistRepository artistRepository) {
+    public SongController(SongRepository songRepository, LikeRepository likeRepository, ArtistRepository artistRepository, AmazonS3 s3Client) {
         this.songRepository = songRepository;
         this.likeRepository = likeRepository;
         this.artistRepository = artistRepository;
+        this.s3Client = s3Client;
     }
 
-    private Long parseUserId(Long headerUserId) {
+    // --- Helper to Upload to Cloudflare ---
+    private void uploadToR2(MultipartFile file, String key) throws IOException {
+        ObjectMetadata metadata = new ObjectMetadata();
+        metadata.setContentType(file.getContentType());
+        metadata.setContentLength(file.getSize());
+        s3Client.putObject(new PutObjectRequest(bucketName, key, file.getInputStream(), metadata));
+    }
+
+    // --- UPDATED UPLOAD ENDPOINT ---
+    @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public SongDto upload(@RequestParam("file") MultipartFile file,
+                          @RequestParam("title") String title,
+                          @RequestParam(value = "artistId", required = false) Long artistId,
+                          @RequestParam(value = "artistName", required = false) String artistName,
+                          @RequestParam(value = "artistImage", required = false) MultipartFile artistImage,
+                          @RequestParam(value = "coverImage", required = false) MultipartFile coverImage,
+                          @RequestParam(value = "album", required = false) String album) {
+
+        if (file == null || file.isEmpty()) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Empty file");
+
+        try {
+            // 1. Upload Song to Cloudflare
+            String songExt = getExtension(file.getOriginalFilename());
+            String songKey = "songs/" + UUID.randomUUID() + songExt;
+            uploadToR2(file, songKey);
+
+            // 2. Upload Cover to Cloudflare (if present)
+            String coverKey = null;
+            if (coverImage != null && !coverImage.isEmpty()) {
+                String coverExt = getExtension(coverImage.getOriginalFilename());
+                coverKey = "covers/" + UUID.randomUUID() + coverExt;
+                uploadToR2(coverImage, coverKey);
+            }
+
+            // 3. Handle Artist Logic (Same as before)
+            Artist artist = null;
+            if (artistId != null && artistRepository.existsById(artistId)) {
+                artist = artistRepository.findById(artistId).get();
+            } else if (artistName != null && !artistName.isBlank()) {
+                artist = artistRepository.findByName(artistName.trim())
+                        .orElseGet(() -> {
+                            Artist a = new Artist();
+                            a.setName(artistName.trim());
+                            return artistRepository.save(a);
+                        });
+            }
+
+            // 4. Save to Database
+            Song s = new Song();
+            s.setTitle(title != null ? title : file.getOriginalFilename());
+            s.setFilePath(songKey); // Save the R2 path (e.g., "songs/xyz.mp3")
+            s.setMimeType(file.getContentType());
+            s.setAlbum(album);
+            s.setCoverPath(coverKey);
+            s.setArtist(artist);
+            songRepository.save(s);
+
+            // Return the DTO so frontend updates immediately
+            return SongDto.fromEntity(s, filesBaseUrl, false, 0);
+
+        } catch (IOException e) {
+            e.printStackTrace(); // Check Render logs for this!
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Upload failed: " + e.getMessage());
+        }
+    }
+
+    // (Keep your existing getOne, list, search, like, unlike methods here...)
+    // ...
+
+    private String getExtension(String filename) {
+        return (filename != null && filename.contains(".")) ? filename.substring(filename.lastIndexOf('.')) : "";
+    }
+    
+    // ... (Keep existing methods)
+        private Long parseUserId(Long headerUserId) {
         return headerUserId == null ? null : headerUserId;
     }
 
@@ -126,79 +203,4 @@ public class SongController {
         int count = likeRepository.countBySongId(id);
         return Map.of("liked", false, "likeCount", count);
     }
-
-    @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public SongDto upload(@RequestParam("file") MultipartFile file,
-                          @RequestParam("title") String title,
-                          @RequestParam(value = "artistId", required = false) Long artistId,
-                          @RequestParam(value = "artistName", required = false) String artistName,
-                          @RequestParam(value = "artistImage", required = false) MultipartFile artistImage,
-                          @RequestParam(value = "coverImage", required = false) MultipartFile coverImage,
-                          @RequestParam(value = "album", required = false) String album) {
-
-        if (file == null || file.isEmpty()) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Empty file");
-
-        try {
-            Path base = Paths.get(mediaBasePath);
-            if (!Files.exists(base)) Files.createDirectories(base);
-
-            // --- Save file locally (only for fallback mode) ---
-            String original = file.getOriginalFilename();
-            String ext = original != null && original.contains(".")
-                    ? original.substring(original.lastIndexOf('.'))
-                    : ".mp3";
-
-            String savedName = UUID.randomUUID().toString() + ext;
-
-            Path songsFolder = base.resolve("songs");
-            Files.createDirectories(songsFolder);
-            Files.copy(file.getInputStream(), songsFolder.resolve(savedName), StandardCopyOption.REPLACE_EXISTING);
-
-            // --- Save cover ---
-            String coverSavedName = null;
-            if (coverImage != null && !coverImage.isEmpty()) {
-                String extCover = coverImage.getOriginalFilename().contains(".")
-                        ? coverImage.getOriginalFilename().substring(coverImage.getOriginalFilename().lastIndexOf('.'))
-                        : ".png";
-
-                coverSavedName = UUID.randomUUID().toString() + extCover;
-
-                Path coverFolder = base.resolve("covers");
-                Files.createDirectories(coverFolder);
-                Files.copy(coverImage.getInputStream(), coverFolder.resolve(coverSavedName), StandardCopyOption.REPLACE_EXISTING);
-            }
-
-            // --- Artist handling ---
-            Artist artist = null;
-
-            if (artistId != null && artistRepository.existsById(artistId)) {
-                artist = artistRepository.findById(artistId).get();
-            } else if (artistName != null && !artistName.isBlank()) {
-                artist = artistRepository.findByName(artistName.trim())
-                        .orElseGet(() -> {
-                            Artist a = new Artist();
-                            a.setName(artistName.trim());
-                            return artistRepository.save(a);
-                        });
-            }
-
-            // --- Create song entity ---
-            Song s = new Song();
-            s.setTitle(title != null ? title : original);
-            s.setFilePath("songs/" + savedName);
-            s.setMimeType(file.getContentType());
-
-            if (album != null) s.setAlbum(album);
-            if (coverSavedName != null) s.setCoverPath("covers/" + coverSavedName);
-            if (artist != null) s.setArtist(artist);
-
-            songRepository.save(s);
-
-            return SongDto.fromEntity(s, filesBaseUrl, false, 0);
-
-        } catch (IOException e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to save file", e);
-        }
-    }
-
 }
