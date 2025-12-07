@@ -51,10 +51,11 @@ public class SongController {
         s3Client.putObject(new PutObjectRequest(bucketName, key, file.getInputStream(), metadata));
     }
 
-    // --- UPLOAD ENDPOINT (UNCHANGED) ---
+    // --- UPLOAD ENDPOINT (UPDATED FOR GENRE) ---
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public SongDto upload(@RequestParam("file") MultipartFile file,
                           @RequestParam("title") String title,
+                          @RequestParam(value = "genre", required = false) String genre, // <--- 1. NEW PARAMETER
                           @RequestParam(value = "artistId", required = false) Long artistId,
                           @RequestParam(value = "artistName", required = false) String artistName,
                           @RequestParam(value = "artistImage", required = false) MultipartFile artistImage,
@@ -93,6 +94,7 @@ public class SongController {
             // 4. Save to Database
             Song s = new Song();
             s.setTitle(title != null ? title : file.getOriginalFilename());
+            s.setGenre(genre != null ? genre : "Unknown"); // <--- 2. SAVE GENRE HERE
             s.setFilePath(songKey);
             s.setMimeType(file.getContentType());
             s.setAlbum(album);
@@ -137,9 +139,8 @@ public class SongController {
     public List<SongDto> search(@RequestParam("q") String q,
                                 @RequestHeader(value = "X-User-Id", required = false) Long userIdHeader) {
         Long userId = parseUserId(userIdHeader);
-        String ql = q == null ? "" : q.toLowerCase(); // Handle null safely
+        String ql = q == null ? "" : q.toLowerCase();
 
-        // Use the new fast repository method
         List<Object[]> results = songRepository.searchWithLikes(ql, userId);
         return mapToDto(results);
     }
@@ -149,7 +150,6 @@ public class SongController {
     public List<SongDto> list(@RequestHeader(value = "X-User-Id", required = false) Long userIdHeader) {
         Long userId = parseUserId(userIdHeader);
 
-        // Use the new fast repository method
         List<Object[]> results = songRepository.findAllWithLikes(userId);
         return mapToDto(results);
     }
