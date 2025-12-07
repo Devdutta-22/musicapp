@@ -28,13 +28,12 @@ public class SongController {
     private final SongRepository songRepository;
     private final LikeRepository likeRepository;
     private final ArtistRepository artistRepository;
-    private final AmazonS3 s3Client; 
+    private final AmazonS3 s3Client;
 
     @Value("${r2.bucket-name}")
     private String bucketName;
 
-    // CHANGED: Matches the variable in your screenshot
-    @Value("${FILES_BASE_URL}") 
+    @Value("${FILES_BASE_URL}")
     private String filesBaseUrl;
 
     public SongController(SongRepository songRepository, LikeRepository likeRepository, ArtistRepository artistRepository, AmazonS3 s3Client) {
@@ -52,7 +51,7 @@ public class SongController {
         s3Client.putObject(new PutObjectRequest(bucketName, key, file.getInputStream(), metadata));
     }
 
-    // --- UPLOAD ENDPOINT ---
+    // --- UPLOAD ENDPOINT (UNCHANGED) ---
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public SongDto upload(@RequestParam("file") MultipartFile file,
                           @RequestParam("title") String title,
@@ -94,7 +93,7 @@ public class SongController {
             // 4. Save to Database
             Song s = new Song();
             s.setTitle(title != null ? title : file.getOriginalFilename());
-            s.setFilePath(songKey); 
+            s.setFilePath(songKey);
             s.setMimeType(file.getContentType());
             s.setAlbum(album);
             s.setCoverPath(coverKey);
@@ -105,7 +104,7 @@ public class SongController {
             return SongDto.fromEntity(s, filesBaseUrl, false, 0);
 
         } catch (IOException e) {
-            e.printStackTrace(); 
+            e.printStackTrace();
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Upload failed: " + e.getMessage());
         }
     }
@@ -113,50 +112,49 @@ public class SongController {
     private String getExtension(String filename) {
         return (filename != null && filename.contains(".")) ? filename.substring(filename.lastIndexOf('.')) : "";
     }
-    
-    // ... (Keep the rest of your Get/List/Search methods here) ...
-    // Make sure you include the search, list, getOne, and like/unlike methods!
-    
+
     private Long parseUserId(Long headerUserId) {
         return headerUserId == null ? null : headerUserId;
     }
 
+    // --- NEW HELPER: Converts Database Result to DTO ---
+    private List<SongDto> mapToDto(List<Object[]> results) {
+        return results.stream().map(row -> {
+            Song song = (Song) row[0];
+            Long likeCount = (Long) row[1];
+            Boolean isLiked = (Boolean) row[2];
+
+            // Safe checks to avoid null pointer exceptions
+            int countVal = likeCount != null ? likeCount.intValue() : 0;
+            boolean likedVal = isLiked != null && isLiked;
+
+            return SongDto.fromEntity(song, filesBaseUrl, likedVal, countVal);
+        }).collect(Collectors.toList());
+    }
+
+    // --- SEARCH ENDPOINT (OPTIMIZED) ---
     @GetMapping("/search")
     public List<SongDto> search(@RequestParam("q") String q,
                                 @RequestHeader(value = "X-User-Id", required = false) Long userIdHeader) {
-
-        String ql = q == null ? "" : q.toLowerCase();
-        List<Song> matched = songRepository.findAll().stream()
-                .filter(s -> (s.getTitle() != null && s.getTitle().toLowerCase().contains(ql)) ||
-                        (s.getArtist() != null && s.getArtist().getName() != null && s.getArtist().getName().toLowerCase().contains(ql)))
-                .collect(Collectors.toList());
-
         Long userId = parseUserId(userIdHeader);
+        String ql = q == null ? "" : q.toLowerCase(); // Handle null safely
 
-        return matched.stream()
-                .map(s -> {
-                    int count = likeRepository.countBySongId(s.getId());
-                    boolean liked = (userId != null) &&
-                            likeRepository.findByUserIdAndSongId(userId, s.getId()).isPresent();
-                    return SongDto.fromEntity(s, filesBaseUrl, liked, count);
-                })
-                .collect(Collectors.toList());
+        // Use the new fast repository method
+        List<Object[]> results = songRepository.searchWithLikes(ql, userId);
+        return mapToDto(results);
     }
 
+    // --- LIST ALL ENDPOINT (OPTIMIZED) ---
     @GetMapping
     public List<SongDto> list(@RequestHeader(value = "X-User-Id", required = false) Long userIdHeader) {
         Long userId = parseUserId(userIdHeader);
 
-        return songRepository.findAll().stream()
-                .map(s -> {
-                    int count = likeRepository.countBySongId(s.getId());
-                    boolean liked = (userId != null) &&
-                            likeRepository.findByUserIdAndSongId(userId, s.getId()).isPresent();
-                    return SongDto.fromEntity(s, filesBaseUrl, liked, count);
-                })
-                .collect(Collectors.toList());
+        // Use the new fast repository method
+        List<Object[]> results = songRepository.findAllWithLikes(userId);
+        return mapToDto(results);
     }
 
+    // --- GET ONE (UNCHANGED) ---
     @GetMapping("/{id}")
     public SongDto getOne(@PathVariable Long id,
                           @RequestHeader(value = "X-User-Id", required = false) Long userIdHeader) {
@@ -172,6 +170,7 @@ public class SongController {
         return SongDto.fromEntity(s, filesBaseUrl, liked, count);
     }
 
+    // --- LIKE / UNLIKE ENDPOINTS (UNCHANGED) ---
     @PostMapping("/{id}/like")
     public Map<String, Object> like(@PathVariable Long id, @RequestHeader("X-User-Id") Long userId) {
         if (!songRepository.existsById(id)) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
@@ -203,6 +202,8 @@ public class SongController {
         int count = likeRepository.countBySongId(id);
         return Map.of("liked", false, "likeCount", count);
     }
+
+    // --- HEALTH CHECK ---
     @GetMapping("/ping")
     public String ping() {
         return "Pong!";
