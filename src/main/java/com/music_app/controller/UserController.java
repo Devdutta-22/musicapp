@@ -110,6 +110,16 @@ public class UserController {
             user.setPlanetName("Neo-" + user.getUsername() + " City");
             return;
         }
+        // ... existing hybrids ...
+
+        // Pop (Sun) + Chill (Water) = FOREST (Green)
+        if (strongPop && strongChill) {
+            user.setPlanetType("Forest World");
+            user.setPlanetName("Eden of " + user.getUsername());
+            return;
+        }
+
+        // ... rest of the code ...
 
         // --- 2. FALLBACK TO SINGLE DOMINANT TYPE ---
         int max = Math.max(Math.max(rock, pop), Math.max(chill, rap));
