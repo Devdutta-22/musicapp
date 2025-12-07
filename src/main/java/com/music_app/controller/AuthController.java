@@ -42,12 +42,21 @@ public class AuthController {
 
         // Simple password check
         if (user != null && user.getPassword().equals(loginRequest.getPassword())) {
-            // Return the User ID and Planet Info so frontend can use it
+            
+            // --- FIX: RETURN ALL PLANET STATS ---
             return ResponseEntity.ok(Map.of(
                 "id", user.getId(),
                 "username", user.getUsername(),
-                "planetType", user.getPlanetType() != null ? user.getPlanetType() : "Unknown",
-                "planetName", user.getPlanetName() != null ? user.getPlanetName() : "Unknown"
+                
+                // CRUCIAL ADDITIONS: Time and Elemental Energy
+                "totalMinutesListened", user.getTotalMinutesListened(), // <-- FIXED TIME RESET BUG
+                "magmaEnergy", user.getMagmaEnergy(),
+                "neonGas", user.getNeonGas(),
+                "permafrost", user.getPermafrost(),
+                "liquidChrome", user.getLiquidChrome(),
+                
+                "planetType", user.getPlanetType() != null ? user.getPlanetType() : "Nebula Cloud",
+                "planetName", user.getPlanetName() != null ? user.getPlanetName() : user.getUsername() + "'s World"
             ));
         }
         return ResponseEntity.status(401).body("Invalid credentials");
