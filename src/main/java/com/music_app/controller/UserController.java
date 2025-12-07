@@ -22,7 +22,6 @@ public class UserController {
         return userRepository.findById(id).map(user -> {
             
             // 1. Absorb Time
-            // We use safe casting because JSON numbers can sometimes be Longs or Integers
             int newMinutes = 0;
             if (payload.get("minutes") instanceof Number) {
                 newMinutes = ((Number) payload.get("minutes")).intValue();
@@ -56,8 +55,7 @@ public class UserController {
             }
 
             // 3. Check for Planetary Evolution
-            // For testing, we check if they have listened for more than 5 minutes total
-            // In production, you might change this to 60 or 100
+            // We check if they have listened for more than 5 minutes total
             if (user.getTotalMinutesListened() > 5) {
                 evolvePlanet(user);
             }
@@ -72,17 +70,49 @@ public class UserController {
         }).orElse(ResponseEntity.notFound().build());
     }
 
-    // --- THE ALGORITHM OF CREATION ---
+    // --- THE HYBRID ALGORITHM OF CREATION ---
     private void evolvePlanet(User user) {
         int rock = user.getMagmaEnergy();
         int pop = user.getNeonGas();
         int chill = user.getPermafrost();
         int rap = user.getLiquidChrome();
+        
+        int totalMusicEnergy = rock + pop + chill + rap;
 
-        // Find the Dominant Element
+        // Need a baseline amount of data before determining a type
+        if (totalMusicEnergy < 5) return; 
+
+        // Define a threshold: A genre is "strong" if it's > 25% of total listening
+        double threshold = totalMusicEnergy * 0.25;
+
+        boolean strongRock = rock > threshold;
+        boolean strongPop = pop > threshold;
+        boolean strongChill = chill > threshold;
+        boolean strongRap = rap > threshold;
+
+        // --- 1. CHECK FOR HYBRIDS (Priority) ---
+
+        // Rock + Pop = Plasma
+        if (strongRock && strongPop) {
+            user.setPlanetType("Plasma World");
+            user.setPlanetName(user.getUsername() + "'s Reactor");
+            return;
+        }
+        // Rock + Chill = Steam
+        if (strongRock && strongChill) {
+            user.setPlanetType("Steam World");
+            user.setPlanetName(user.getUsername() + "'s Geyser");
+            return;
+        }
+        // Pop + Rap = Cyberpunk
+        if (strongPop && strongRap) {
+            user.setPlanetType("Cyberpunk");
+            user.setPlanetName("Neo-" + user.getUsername() + " City");
+            return;
+        }
+
+        // --- 2. FALLBACK TO SINGLE DOMINANT TYPE ---
         int max = Math.max(Math.max(rock, pop), Math.max(chill, rap));
-
-        if (max == 0) return; // Still a Nebula if no genres played
 
         if (max == rock) {
             user.setPlanetType("Volcanic");
@@ -94,7 +124,7 @@ public class UserController {
             user.setPlanetType("Ice World");
             user.setPlanetName(user.getUsername() + "'s Tundra");
         } else if (max == rap) {
-            user.setPlanetType("Metallic"); // Make sure you have a metallic.png or similar!
+            user.setPlanetType("Metallic");
             user.setPlanetName("Cyber " + user.getUsername());
         }
     }
