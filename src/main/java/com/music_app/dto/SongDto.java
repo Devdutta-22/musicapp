@@ -14,6 +14,9 @@ public class SongDto {
 
     public String coverUrl;
     public String artistImageUrl;
+    
+    // --- NEW FIELD: GENRE ---
+    public String genre;
 
     public boolean liked;
     public int likeCount;
@@ -88,6 +91,9 @@ public class SongDto {
         d.durationSeconds = s.getDurationSeconds();
         d.mimeType = s.getMimeType();
         d.artistName = s.getArtist() != null ? s.getArtist().getName() : null;
+        
+        // --- POPULATE GENRE ---
+        d.genre = s.getGenre();
 
         // like data
         d.liked = liked;
