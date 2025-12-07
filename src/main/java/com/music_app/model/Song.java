@@ -20,6 +20,9 @@ public class Song {
     private String title;
 
     private String album;
+    
+    // --- NEW FIELD: GENRE ---
+    private String genre; 
 
     private Integer durationSeconds;
 
@@ -43,6 +46,10 @@ public class Song {
 
     public String getAlbum() { return album; }
     public void setAlbum(String album) { this.album = album; }
+    
+    // --- NEW GETTER & SETTER ---
+    public String getGenre() { return genre; }
+    public void setGenre(String genre) { this.genre = genre; }
 
     public Integer getDurationSeconds() { return durationSeconds; }
     public void setDurationSeconds(Integer durationSeconds) { this.durationSeconds = durationSeconds; }
