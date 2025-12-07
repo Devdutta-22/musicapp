@@ -20,6 +20,12 @@ public class User {
     private String planetType; // e.g., "Gas Giant", "Volcanic"
     private int totalMinutesListened = 0;
 
+    // --- NEW: ELEMENTAL ENERGY (For Evolution Logic) ---
+    private int magmaEnergy = 0;   // Tracks Rock/Metal
+    private int neonGas = 0;       // Tracks Pop/Dance
+    private int permafrost = 0;    // Tracks Lo-Fi/Classical
+    private int liquidChrome = 0;  // Tracks Hip-Hop/Electronic
+
     public User() {}
 
     // Getters and Setters
@@ -40,4 +46,17 @@ public class User {
     
     public int getTotalMinutesListened() { return totalMinutesListened; }
     public void setTotalMinutesListened(int totalMinutesListened) { this.totalMinutesListened = totalMinutesListened; }
+
+    // --- NEW GETTERS AND SETTERS ---
+    public int getMagmaEnergy() { return magmaEnergy; }
+    public void setMagmaEnergy(int magmaEnergy) { this.magmaEnergy = magmaEnergy; }
+
+    public int getNeonGas() { return neonGas; }
+    public void setNeonGas(int neonGas) { this.neonGas = neonGas; }
+
+    public int getPermafrost() { return permafrost; }
+    public void setPermafrost(int permafrost) { this.permafrost = permafrost; }
+
+    public int getLiquidChrome() { return liquidChrome; }
+    public void setLiquidChrome(int liquidChrome) { this.liquidChrome = liquidChrome; }
 }
