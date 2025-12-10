@@ -1,47 +1,35 @@
 package com.music_app.controller;
 
 import com.music_app.model.LikeEntity;
-import com.music_app.model.Song;
-import com.music_app.model.User;
 import com.music_app.repository.LikeRepository;
 import com.music_app.repository.SongRepository;
 import com.music_app.repository.UserRepository;
-
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
 import java.time.Instant;
-import java.util.*;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/likes")
 public class LikeController {
 
     private final LikeRepository likeRepo;
-    private final UserRepository userRepo;
-    private final SongRepository songRepo;
+    // Removed unused repos for cleaner code
 
-    public LikeController(LikeRepository likeRepo, UserRepository userRepo, SongRepository songRepo) {
+    public LikeController(LikeRepository likeRepo) {
         this.likeRepo = likeRepo;
-        this.userRepo = userRepo;
-        this.songRepo = songRepo;
     }
 
-    // FIX USER FOR NOW — ALWAYS USER 1
-    private Long getUserId() {
-        return 1L;
-    }
-
+    // --- 1. LIKE A SONG (User Specific) ---
     @PostMapping("/{songId}")
-    public ResponseEntity<?> likeSong(@PathVariable Long songId) {
-        Long userId = getUserId();
-
+    public ResponseEntity<?> likeSong(@PathVariable Long songId, @RequestHeader("X-User-Id") Long userId) {
+        // Check if already liked by THIS specific user
         if (likeRepo.findByUserIdAndSongId(userId, songId).isPresent()) {
             return ResponseEntity.ok("Already liked");
         }
 
         LikeEntity like = new LikeEntity();
-        like.setUserId(userId);
+        like.setUserId(userId); // <--- Uses the actual logged-in ID
         like.setSongId(songId);
         like.setCreatedAt(Instant.now());
 
@@ -49,27 +37,17 @@ public class LikeController {
         return ResponseEntity.ok("Liked");
     }
 
+    // --- 2. UNLIKE A SONG (User Specific) ---
     @DeleteMapping("/{songId}")
-    public ResponseEntity<?> unlikeSong(@PathVariable Long songId) {
-        Long userId = getUserId();
-
+    public ResponseEntity<?> unlikeSong(@PathVariable Long songId, @RequestHeader("X-User-Id") Long userId) {
         Optional<LikeEntity> like = likeRepo.findByUserIdAndSongId(userId, songId);
         like.ifPresent(likeRepo::delete);
-
         return ResponseEntity.ok("Unliked");
     }
 
+    // --- 3. GET LIKE COUNT (Public info) ---
     @GetMapping("/{songId}")
     public int getLikeCount(@PathVariable Long songId) {
         return likeRepo.countBySongId(songId);
-    }
-
-    @GetMapping("/user")
-    public List<Long> getLikedSongs() {
-        Long userId = getUserId();
-        return likeRepo.findByUserId(userId)
-                .stream()
-                .map(LikeEntity::getSongId)
-                .toList();
     }
 }
