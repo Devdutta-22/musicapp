@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/playlists")
@@ -22,37 +23,63 @@ public class PlaylistController {
         this.songRepository = songRepository;
     }
 
+    // --- 1. CREATE (Fixed to save User ID) ---
     @PostMapping
-    public Playlist create(@RequestBody Playlist p) {
-        if (p.getName() == null || p.getName().isBlank()) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Name required");
+    public Playlist create(@RequestBody Playlist p, @RequestHeader("X-User-Id") Long userId) {
+        if (p.getName() == null || p.getName().isBlank()) 
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Name required");
+        
+        p.setUserId(userId); // Save the owner
         return playlistRepository.save(p);
     }
 
+    // --- 2. LIST (Fixed to show ONLY your playlists) ---
     @GetMapping
-    public List<Playlist> list() {
-        return playlistRepository.findAll();
+    public List<Playlist> list(@RequestHeader("X-User-Id") Long userId) {
+        return playlistRepository.findByUserId(userId);
     }
 
-    @GetMapping("/{id}")
-    public Playlist get(@PathVariable Long id) {
-        return playlistRepository.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-    }
+    // --- 3. ADD SONG (This fixes the "Failed to Add" error) ---
+    // Matches the Frontend call to /api/playlists/{id}/songs
+    @PostMapping("/{id}/songs")
+    public Playlist addSongFromBody(@PathVariable Long id, @RequestBody Map<String, Long> payload) {
+        Long songId = payload.get("songId");
+        if (songId == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Song ID required");
 
-    @PostMapping("/{id}/add/{songId}")
-    public Playlist addSong(@PathVariable Long id, @PathVariable Long songId) {
-        Playlist pl = playlistRepository.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-        Song s = songRepository.findById(songId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-        if (!pl.getSongs().contains(s)) pl.getSongs().add(s);
+        Playlist pl = playlistRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Playlist not found"));
+        
+        Song s = songRepository.findById(songId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Song not found"));
+        
+        // Add only if not already present to prevent duplicates
+        if (!pl.getSongs().contains(s)) {
+            pl.getSongs().add(s);
+        }
+        
         return playlistRepository.save(pl);
     }
 
-    @PostMapping("/{id}/remove/{songId}")
+    // --- Get Single Playlist ---
+    @GetMapping("/{id}")
+    public Playlist get(@PathVariable Long id) {
+        return playlistRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+    }
+
+    // --- Remove Song ---
+    @DeleteMapping("/{id}/songs/{songId}")
     public Playlist removeSong(@PathVariable Long id, @PathVariable Long songId) {
-        Playlist pl = playlistRepository.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        Playlist pl = playlistRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        
         pl.getSongs().removeIf(s -> s.getId().equals(songId));
         return playlistRepository.save(pl);
     }
 
+    // --- Delete Playlist ---
     @DeleteMapping("/{id}")
-    public void delete(@PathVariable Long id) { playlistRepository.deleteById(id); }
+    public void delete(@PathVariable Long id) { 
+        playlistRepository.deleteById(id); 
+    }
 }
