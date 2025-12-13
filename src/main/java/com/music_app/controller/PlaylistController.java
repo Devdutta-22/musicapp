@@ -22,17 +22,27 @@ public class PlaylistController {
         this.songRepository = songRepository;
     }
 
+    // --- REPLACE YOUR EXISTING create METHOD WITH THIS ---
     @PostMapping
-    public Playlist create(@RequestBody Playlist p) {
-        if (p.getName() == null || p.getName().isBlank()) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Name required");
+    public Playlist create(@RequestBody Playlist p, @RequestHeader("X-User-Id") Long userId) {
+        if (p.getName() == null || p.getName().isBlank()) 
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Name required");
+        
+        // Save the User ID so we know who owns this playlist
+        p.setUserId(userId);
+        
         return playlistRepository.save(p);
     }
 
+    // --- REPLACE YOUR EXISTING list METHOD WITH THIS ---
     @GetMapping
-    public List<Playlist> list() {
-        return playlistRepository.findAll();
+    public List<Playlist> list(@RequestHeader("X-User-Id") Long userId) {
+        // Only return playlists for the logged-in user
+        return playlistRepository.findByUserId(userId);
     }
 
+    // ... (Keep the rest of your methods: get, addSong, removeSong, delete unchanged) ...
+    
     @GetMapping("/{id}")
     public Playlist get(@PathVariable Long id) {
         return playlistRepository.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
