@@ -7,7 +7,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/chat")
-@CrossOrigin(origins = "*")// <--- CHANGE TO "*" TO WORK EVERYWHERE
+// 🔴 REMOVED THE CONFLICTING ANNOTATION: @CrossOrigin(origins = "*")
 public class ChatController {
 
     private final AIService aiService;
