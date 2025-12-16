@@ -8,24 +8,21 @@ import java.util.*;
 @Service
 public class AIService {
 
-    // 🔴 PASTE YOUR COPIED API KEY HERE INSIDE THE QUOTES
-    private static final String API_KEY = "AIzaSyDGF5pdmm2MsAs9CxcNAB4iz2tkolG3mLs"; 
+    // 🔴 REPLACE THIS WITH YOUR NEW KEY IF THE OLD ONE FAILED
+    private static final String API_KEY = "AIzaSyDANbOjG2nlDGt9dqRi9Q2iBPBTdywUXGI"; 
     
-    // We use the "Gemini 1.5 Flash" model which is fast and free
     private static final String API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + API_KEY;
 
     public String getAIResponse(String userMessage) {
         try {
             RestTemplate restTemplate = new RestTemplate();
 
-            // 1. Header
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
 
-            // 2. Body: Construct the JSON structure Gemini expects
-            // { "contents": [{ "parts": [{ "text": "..." }] }] }
+            // Construct the JSON: { "contents": [{ "parts": [{ "text": "..." }] }] }
             Map<String, Object> part = new HashMap<>();
-            part.put("text", "You are a helpful music assistant. Keep answers brief (under 50 words). User asks: " + userMessage);
+            part.put("text", "You are a helpful music assistant. Keep answers short. User asks: " + userMessage);
 
             Map<String, Object> content = new HashMap<>();
             content.put("parts", Collections.singletonList(part));
@@ -35,12 +32,10 @@ public class AIService {
 
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
 
-            // 3. Send Request
             ResponseEntity<Map> response = restTemplate.postForEntity(API_URL, entity, Map.class);
 
-            // 4. Parse the Answer
-            Map<String, Object> responseBody = response.getBody();
-            if (responseBody != null) {
+            if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
+                Map<String, Object> responseBody = response.getBody();
                 List<Map<String, Object>> candidates = (List<Map<String, Object>>) responseBody.get("candidates");
                 if (candidates != null && !candidates.isEmpty()) {
                     Map<String, Object> contentResp = (Map<String, Object>) candidates.get(0).get("content");
@@ -48,11 +43,11 @@ public class AIService {
                     return (String) parts.get(0).get("text");
                 }
             }
-            return "The stars are silent today. (No response from AI)";
+            return "I couldn't think of an answer. (Empty response from AI)";
 
         } catch (Exception e) {
-            e.printStackTrace();
-            return "I couldn't reach the AI galaxy. Check your API Key.";
+            e.printStackTrace(); // This prints the REAL error to your Render logs
+            return "Error: " + e.getMessage(); 
         }
     }
 }
