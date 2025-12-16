@@ -8,10 +8,11 @@ import java.util.*;
 @Service
 public class AIService {
 
-    // 🔴 REPLACE THIS WITH YOUR NEW KEY IF THE OLD ONE FAILED
+    // ✅ Keep your working API Key
     private static final String API_KEY = "AIzaSyDANbOjG2nlDGt9dqRi9Q2iBPBTdywUXGI"; 
     
-    private static final String API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + API_KEY;
+    // 🔴 CHANGE: Use 'gemini-1.5-flash-001' (Exact Version) instead of generic name
+    private static final String API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-001:generateContent?key=" + API_KEY;
 
     public String getAIResponse(String userMessage) {
         try {
@@ -20,9 +21,9 @@ public class AIService {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
 
-            // Construct the JSON: { "contents": [{ "parts": [{ "text": "..." }] }] }
+            // 1. Tell AI to be a "Helpful Assistant" (General Purpose)
             Map<String, Object> part = new HashMap<>();
-            part.put("text", "You are a helpful music assistant. Keep answers short. User asks: " + userMessage);
+            part.put("text", "You are a helpful AI assistant. Answer the user's question concisely. User asks: " + userMessage);
 
             Map<String, Object> content = new HashMap<>();
             content.put("parts", Collections.singletonList(part));
@@ -32,8 +33,10 @@ public class AIService {
 
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
 
+            // 2. Send Request
             ResponseEntity<Map> response = restTemplate.postForEntity(API_URL, entity, Map.class);
 
+            // 3. Parse Response
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
                 Map<String, Object> responseBody = response.getBody();
                 List<Map<String, Object>> candidates = (List<Map<String, Object>>) responseBody.get("candidates");
@@ -46,7 +49,8 @@ public class AIService {
             return "I couldn't think of an answer. (Empty response from AI)";
 
         } catch (Exception e) {
-            e.printStackTrace(); // This prints the REAL error to your Render logs
+            e.printStackTrace(); 
+            // This will show the error in the chat for easier debugging
             return "Error: " + e.getMessage(); 
         }
     }
