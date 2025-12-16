@@ -4,7 +4,9 @@ import com.music_app.model.User;
 import com.music_app.repository.UserRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import java.util.List; // <--- ADDED THIS IMPORT
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/users")
@@ -14,6 +16,24 @@ public class UserController {
 
     public UserController(UserRepository userRepository) {
         this.userRepository = userRepository;
+    }
+
+    // --- NEW: LEADERBOARD ENDPOINT ---
+    // URL Result: /api/users/leaderboard
+    // REMINDER: Update your React Leaderboard.jsx to fetch "/api/users/leaderboard"
+    @GetMapping("/leaderboard") 
+    public ResponseEntity<List<Map<String, Object>>> getLeaderboard() {
+        // Ensure findTopListeners() is defined in UserRepository!
+        List<User> topUsers = userRepository.findTopListeners();
+
+        List<Map<String, Object>> response = topUsers.stream().map(u -> Map.of(
+            "id", u.getId(),
+            "username", u.getUsername(),
+            "minutes", u.getTotalMinutesListened(),
+            "planetType", u.getPlanetType() != null ? u.getPlanetType() : "Unknown"
+        )).collect(Collectors.toList());
+
+        return ResponseEntity.ok(response);
     }
 
     // --- THE EVOLUTION ENGINE ---
@@ -55,7 +75,6 @@ public class UserController {
             }
 
             // 3. Check for Planetary Evolution
-            // We check if they have listened for more than 5 minutes total
             if (user.getTotalMinutesListened() > 5) {
                 evolvePlanet(user);
             }
@@ -79,10 +98,8 @@ public class UserController {
         
         int totalMusicEnergy = rock + pop + chill + rap;
 
-        // Need a baseline amount of data before determining a type
         if (totalMusicEnergy < 5) return; 
 
-        // Define a threshold: A genre is "strong" if it's > 25% of total listening
         double threshold = totalMusicEnergy * 0.25;
 
         boolean strongRock = rock > threshold;
@@ -90,36 +107,27 @@ public class UserController {
         boolean strongChill = chill > threshold;
         boolean strongRap = rap > threshold;
 
-        // --- 1. CHECK FOR HYBRIDS (Priority) ---
-
-        // Rock + Pop = Plasma
+        // --- 1. CHECK FOR HYBRIDS ---
         if (strongRock && strongPop) {
             user.setPlanetType("Plasma World");
             user.setPlanetName(user.getUsername() + "'s Reactor");
             return;
         }
-        // Rock + Chill = Steam
         if (strongRock && strongChill) {
             user.setPlanetType("Steam World");
             user.setPlanetName(user.getUsername() + "'s Geyser");
             return;
         }
-        // Pop + Rap = Cyberpunk
         if (strongPop && strongRap) {
             user.setPlanetType("Cyberpunk");
             user.setPlanetName("Neo-" + user.getUsername() + " City");
             return;
         }
-        // ... existing hybrids ...
-
-        // Pop (Sun) + Chill (Water) = FOREST (Green)
         if (strongPop && strongChill) {
             user.setPlanetType("Forest World");
             user.setPlanetName("Eden of " + user.getUsername());
             return;
         }
-
-        // ... rest of the code ...
 
         // --- 2. FALLBACK TO SINGLE DOMINANT TYPE ---
         int max = Math.max(Math.max(rock, pop), Math.max(chill, rap));

@@ -13,11 +13,12 @@ public class Playlist {
 
     private String name;
 
-    private Long userId; // optional owner, can be null for global playlists
+    private Long userId; // owner of the playlist
 
     private Instant createdAt = Instant.now();
 
-    @ManyToMany
+    // Changed to EAGER so songs are loaded immediately when you fetch the playlist
+    @ManyToMany(fetch = FetchType.EAGER) 
     @JoinTable(
             name = "playlist_songs",
             joinColumns = @JoinColumn(name = "playlist_id"),
@@ -26,6 +27,7 @@ public class Playlist {
     private List<Song> songs = new ArrayList<>();
 
     public Playlist() {}
+    
     // getters & setters
     public Long getId() { return id; }
     public String getName() { return name; }
@@ -35,4 +37,10 @@ public class Playlist {
     public Instant getCreatedAt() { return createdAt; }
     public List<Song> getSongs() { return songs; }
     public void setSongs(List<Song> songs) { this.songs = songs; }
+
+    // --- IMPORTANT: This fixes the "0 songs" display ---
+    // The frontend looks for a "songCount" property, which this method provides automatically.
+    public int getSongCount() {
+        return songs.size();
+    }
 }
