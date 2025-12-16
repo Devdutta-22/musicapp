@@ -8,11 +8,11 @@ import java.util.*;
 @Service
 public class AIService {
 
-    // ✅ Keep your working API Key
+    // ✅ Keep your API Key
     private static final String API_KEY = "AIzaSyDANbOjG2nlDGt9dqRi9Q2iBPBTdywUXGI"; 
     
-    // 🔴 CHANGE: Use 'gemini-1.5-flash-001' (Exact Version) instead of generic name
-    private static final String API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-001:generateContent?key=" + API_KEY;
+    // 🔴 CHANGE: Use 'gemini-1.5-flash-002' (The latest stable version)
+    private static final String API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-002:generateContent?key=" + API_KEY;
 
     public String getAIResponse(String userMessage) {
         try {
@@ -21,7 +21,7 @@ public class AIService {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
 
-            // 1. Tell AI to be a "Helpful Assistant" (General Purpose)
+            // 1. Prompt Logic
             Map<String, Object> part = new HashMap<>();
             part.put("text", "You are a helpful AI assistant. Answer the user's question concisely. User asks: " + userMessage);
 
@@ -50,7 +50,7 @@ public class AIService {
 
         } catch (Exception e) {
             e.printStackTrace(); 
-            // This will show the error in the chat for easier debugging
+            // Return the error so you can see it in the chat
             return "Error: " + e.getMessage(); 
         }
     }
