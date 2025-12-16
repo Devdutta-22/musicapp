@@ -23,10 +23,13 @@ public class UserController {
     // REMINDER: Update your React Leaderboard.jsx to fetch "/api/users/leaderboard"
     @GetMapping("/leaderboard") 
     public ResponseEntity<List<Map<String, Object>>> getLeaderboard() {
-        // Ensure findTopListeners() is defined in UserRepository!
         List<User> topUsers = userRepository.findTopListeners();
 
-        List<Map<String, Object>> response = topUsers.stream().map(u -> Map.of(
+        // 🔴 OLD ERROR LINE:
+        // List<Map<String, Object>> response = topUsers.stream().map(u -> Map.of( ...
+
+        // 🟢 NEW FIXED LINE (Added <String, Object>):
+        List<Map<String, Object>> response = topUsers.stream().map(u -> Map.<String, Object>of(
             "id", u.getId(),
             "username", u.getUsername(),
             "minutes", u.getTotalMinutesListened(),
