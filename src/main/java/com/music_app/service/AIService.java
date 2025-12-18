@@ -9,16 +9,14 @@ import java.util.*;
 @Service
 public class AIService {
 
-    // 🟢 SECURE: Read key from Environment Variables
     @Value("${gemini.api.key}")
     private String apiKey;
 
-    // 🟢 UPDATED: Use the latest Gemini 2.5 Flash model
-    private static final String MODEL_ID = "gemini-2.5-flash";
+    // ✅ Using the High-Limit Stable Model
+    private static final String MODEL_ID = "gemini-1.5-flash";
 
     public String getAIResponse(String userMessage) {
         try {
-            // Check if key is loaded
             if (apiKey == null || apiKey.isEmpty() || apiKey.startsWith("INSERT")) {
                 return "Error: Server API Key is missing. Please check Render Environment Variables.";
             }
@@ -29,9 +27,19 @@ public class AIService {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
 
-            // Construct the Prompt
+            // 🎵 CUSTOM PERSONA PROMPT
+            String personaInstruction = 
+                "You are the AI Guide for 'Astronote', a space-themed music application. " +
+                "Your persona is a 'Cosmic DJ'. " +
+                "Guidelines: " +
+                "1. Answer the user's question clearly and accurately. " +
+                "2. If the topic is music, show deep knowledge. " +
+                "3. If the topic is NOT music, still answer it, but try to add a subtle musical or cosmic flair to your tone (e.g., mention frequencies, vibes, orbits, or harmony). " +
+                "4. Keep your answer balanced: not too short (one word), but not an essay. Aim for 2-4 sentences unless a list is requested. " +
+                "User asks: " + userMessage;
+
             Map<String, Object> part = new HashMap<>();
-            part.put("text", "You are a helpful AI assistant. Answer the user's question concisely. User asks: " + userMessage);
+            part.put("text", personaInstruction);
 
             Map<String, Object> content = new HashMap<>();
             content.put("parts", Collections.singletonList(part));
@@ -41,10 +49,8 @@ public class AIService {
 
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
 
-            // Send Request
             ResponseEntity<Map> response = restTemplate.postForEntity(apiUrl, entity, Map.class);
 
-            // Parse Response
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
                 Map<String, Object> responseBody = response.getBody();
                 List<Map<String, Object>> candidates = (List<Map<String, Object>>) responseBody.get("candidates");
@@ -54,11 +60,11 @@ public class AIService {
                     return (String) parts.get(0).get("text");
                 }
             }
-            return "I couldn't think of an answer. (Empty response from AI)";
+            return "The signal is lost in the void. (Empty response)";
 
         } catch (Exception e) {
             e.printStackTrace();
-            return "Error: " + e.getMessage();
+            return "Error contacting the mothership: " + e.getMessage();
         }
     }
 }
