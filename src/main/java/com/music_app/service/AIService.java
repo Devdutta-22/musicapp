@@ -1,5 +1,6 @@
 package com.music_app.service;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.http.*;
@@ -8,21 +9,27 @@ import java.util.*;
 @Service
 public class AIService {
 
-    // ✅ Your API Key
-    private static final String API_KEY = "AIzaSyDLHjXqlOg0Oizt0VX3dWgWeSRu-syMf64"; 
-    
-    // ✅ Using the latest Free Tier friendly model
-    private static final String API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + API_KEY;
+    @Value("${gemini.api.key}")
+    private String apiKey;
+
+    // Use the latest stable model
+    private static final String MODEL_ID = "gemini-2.5-flash";
 
     public String getAIResponse(String userMessage) {
         try {
+            if (apiKey == null || apiKey.isEmpty() || apiKey.startsWith("INSERT")) {
+                return "Error: Server API Key is missing. Please check Render Environment Variables.";
+            }
+
+            String apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/" + MODEL_ID + ":generateContent?key=" + apiKey;
+
             RestTemplate restTemplate = new RestTemplate();
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
 
-            // 1. Construct the Prompt
+            // 🔴 CHANGE IS HERE: "provide a detailed and comprehensive answer"
             Map<String, Object> part = new HashMap<>();
-            part.put("text", "You are a helpful AI assistant. Answer the user's question concisely. User asks: " + userMessage);
+            part.put("text", "You are a helpful AI assistant. Provide a detailed and comprehensive answer to the user's question. User asks: " + userMessage);
 
             Map<String, Object> content = new HashMap<>();
             content.put("parts", Collections.singletonList(part));
@@ -32,10 +39,8 @@ public class AIService {
 
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
 
-            // 2. Send Request
-            ResponseEntity<Map> response = restTemplate.postForEntity(API_URL, entity, Map.class);
+            ResponseEntity<Map> response = restTemplate.postForEntity(apiUrl, entity, Map.class);
 
-            // 3. Parse Response
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
                 Map<String, Object> responseBody = response.getBody();
                 List<Map<String, Object>> candidates = (List<Map<String, Object>>) responseBody.get("candidates");
@@ -48,8 +53,8 @@ public class AIService {
             return "I couldn't think of an answer. (Empty response from AI)";
 
         } catch (Exception e) {
-            e.printStackTrace(); 
-            return "Error: " + e.getMessage(); 
+            e.printStackTrace();
+            return "Error: " + e.getMessage();
         }
     }
 }
