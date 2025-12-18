@@ -15,7 +15,7 @@ public class AIService {
     private String apiKeysString;
 
     // Use the stable model
-    private static final String MODEL_ID = "gemini-1.5-flash-002"
+    private static final String MODEL_ID = "gemini-1.5-flash-002";
 
     public String getAIResponse(String userMessage) {
         // 1. Parse Keys
