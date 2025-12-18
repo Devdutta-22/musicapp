@@ -13,8 +13,7 @@ public class AIService {
     private String apiKey;
 
     // ✅ Using the High-Limit Stable Model
-    private static final String MODEL_ID = "gemini-1.5-flash";
-
+   private static final String MODEL_ID = "gemini-1.5-flash-002";
     public String getAIResponse(String userMessage) {
         try {
             if (apiKey == null || apiKey.isEmpty() || apiKey.startsWith("INSERT")) {
