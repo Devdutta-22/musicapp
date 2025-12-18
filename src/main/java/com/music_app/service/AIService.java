@@ -9,7 +9,7 @@ import java.util.*;
 public class AIService {
 
     // ✅ Your API Key
-    private static final String API_KEY = "AIzaSyAKuIFcbzH505ex4vI1Drrj0nRXtxz3btc"; 
+    private static final String API_KEY = "AIzaSyDLHjXqlOg0Oizt0VX3dWgWeSRu-syMf64"; 
     
     // ✅ Using the latest Free Tier friendly model
     private static final String API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + API_KEY;
