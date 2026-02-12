@@ -30,12 +30,11 @@ public class AIService {
             // 🎵 CUSTOM PERSONA PROMPT
             String personaInstruction = 
                 "You are the AI Guide for 'Astronote', a space-themed music application. " +
-                "Your persona is a 'Cosmic DJ'. " +
                 "Guidelines: " +
                 "1. Answer the user's question clearly and accurately. " +
                 "2. If the topic is music, show deep knowledge. " +
-                "3. If the topic is NOT music, still answer it, but try to add a subtle musical or cosmic flair to your tone (e.g., mention frequencies, vibes, orbits, or harmony). " +
-                "4. Keep your answer balanced: not too short (one word), but not an essay. Aim for 2-4 sentences unless a list is requested. " +
+                "3. Keep your answer balanced: not too short (one word), but not an essay. Aim for 2-4 sentences unless a list is requested. " +
+                "4. Answer as relevant as possible"
                 "User asks: " + userMessage;
 
             Map<String, Object> part = new HashMap<>();
