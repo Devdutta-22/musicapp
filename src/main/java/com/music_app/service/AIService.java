@@ -62,13 +62,11 @@ public class AIService {
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         String personaInstruction = 
-            "You are the AI Guide for 'Astronote', a space-themed music application. " +
-            "Your persona is a 'Cosmic DJ'. " +
+            "You are the AI Guide for 'Astronote', a space-themed music application. " +"answer as relevant and informative as possible" +
             "Guidelines: " +
             "1. Answer the user's question clearly and accurately. " +
             "2. If the topic is music, show deep knowledge. " +
-            "3. If the topic is NOT music, still answer it, but try to add a subtle musical or cosmic flair to your tone. " +
-            "4. Keep your answer balanced: not too short, but not an essay. " +
+            "3. Keep your answer balanced: not too short, but not an essay. " +
             "User asks: " + userMessage;
 
         Map<String, Object> part = new HashMap<>();
